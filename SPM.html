@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>	<meta charset="utf-8"><title>SP Manager</title>
+<style type="text/css">	body {color: black;	background-color: #FFFFFF ; font-family: Helvetica ; }		h1	{font-size:2em; margin-bottom:5px; margin-top:5px;}	h2	{font-size:0.8em; font-weight:normal; text-align:left;}	h3	{font-family: Helvetica ; font-size:0.5em; text-align:center;}	table {width: 100%;} 	td {width: 15%;} 	canvas {margin-left: 10%;}	a.info {position:relative;text-decoration: none; }	a:hover.info {text-decoration: none;background: none;}	a.info span {display: none;}	a:hover.info span {display: inline;	position: absolute; top:2em;	left:2em;	z-index: 20;	background: orange; color:black;	border:1px solid black;	text-align:center;	font-weight:normal;	font-size: 0.7em;	line-height:0.9em;	padding:2px 4px;}</style>
+
+<script type="text/javascript">
+var i=0; var j=0; 	refresh1=new Date().getTime();		refresh2=new Date().getTime();
+largu = window.innerWidth*0.12;		xs=largu/100;
+longu = window.innerHeight*0.12;	ys=longu/100;
+
+function set(a,b)							{document.getElementById(a).innerHTML=b;}
+function get(a)								{if(document.getElementById(a).checked == true){return 1;} else return 0;}
+function uncheck(a)							{document.getElementById(a).checked = false;}
+function Clean(c) 							{c.fillStyle = "white";	c.fillRect (0, 0, xs*100, ys*100);}
+function Clean2(c) 							{c.fillStyle = "#808080";	c.fillRect (0, 0, 1200, 220);}
+function Rectangle2(c,x,y,l,h)				{c.fillRect (x,y,l,h);}
+function Rectangle(c,x,y,l,h)				{c.fillRect (xs*x, ys*y, xs*l, ys*h);}
+function Triangle(c,x1,y1,x2,y2,x3,y3)		{c.beginPath();	c.moveTo(xs*x1,ys*y1);	c.lineTo(xs*x2,ys*y2);	c.lineTo(xs*x3,ys*y3);	c.fill();}
+function Cercle(c,x,y,r) 					{c.beginPath();	c.arc(xs*x, ys*y, ys*r, 0, Math.PI*2, true);	c.closePath(); c.fill();}
+function Trait(c,x1,y1,x2,y2,col) 			{c.beginPath(); c.moveTo(x1*xs,y1*ys);	c.lineTo(x2*xs,y2*ys);  c.strokeStyle = col;	c.stroke();}
+
+
+var WIP=[];
+var Cash=[];
+var Sold=[];
+var Dema=[];
+var Cut_UU=[];
+var Cut_MU=[];
+var Cut_WU=[];
+var Wel_UU=[];
+var Wel_MU=[];
+var Wel_WU=[];
+
+ 
+function init()	{
+Demand=0;		Dem_Target=100;		MeanF=4.6;			StdevF=0.4;				Growth=0;
+Sales=0;		Costs=0;			Money=30000;		Year=0;					Speed=1;	
+SixSigma=0;		SetReduc=0;			firstS=0;			firstR=0;
+Order=45;		Cost_O=0;
+Stock1=0;		Costock1=0
+NB_Workers_C=1;	NB_Machines_C=1;	Capacity_C=0;		Utilization_WC=0;	Utilization_MC=0;	Setup_C=0; Scrap_C=0;	Prod_C=0;	LotSize_C=100;	Cost_C=0;
+Stock2=0;		Costock2=0
+NB_Workers_W=2;	NB_Machines_W=1;	Capacity_W=0;		Utilization_WW=0;	Utilization_MW=0;	Setup_W=0; Scrap_W=0;	Prod_W=0;	LotSize_W=100;	Cost_W=0;
+Stock3=0;		Costock3=0
+
+
+set("YEA",Year);			set("CMD",Order);			set("ST1",Stock1);			set("CT1",Costock1);		set("ST2",Stock2);			set("CT2",Costock2);	set("ST3",Stock3);	set("CT3",Costock3);
+set("CAC",Capacity_C);		set("NWC",NB_Workers_C);	set("UWC",Utilization_WC);	set("NMC",NB_Machines_C);	set("UMC",Utilization_MC);	set("STC",Setup_C);		set("SCC",Scrap_C);	set("PRC",Prod_C);		set("LS1", LotSize_C);  set("CSTC",Cost_C);
+set("CAW",Capacity_W);		set("NWW",NB_Workers_W);	set("UWW",Utilization_WW);	set("NMW",NB_Machines_W);	set("UMW",Utilization_MW);	set("STW",Setup_W);		set("SCW",Scrap_W);	set("PRW",Prod_W);		set("LS2", LotSize_W);  set("CSTW",Cost_W);
+set("LSD",Demand); 		//uncheck("CTR");				uncheck("PRO");				uncheck("SSG");
+		
+//Dessin des Canvas
+for(c=1;c<7;c++){document.getElementById("can"+c+"").innerHTML="<canvas id=\"canvas"+c+"\" width=\""+largu+"px\" height=\""+longu+"px\" ></canvas>"; }
+stat1 = document.getElementById('canana1').getContext('2d');
+stat2 = document.getElementById('canana2').getContext('2d');
+stat3 = document.getElementById('canana3').getContext('2d');
+stat4 = document.getElementById('canana4').getContext('2d');
+drawShape(); 
+}
+
+
+function GetOptions()	{SixSigma=get("SSG");	SetReduc=get("STP"); if(firstS==0&&SixSigma==1){firstS=1; Money=Money-5000;}	if(firstR==0&&SetReduc==1){firstR=1; Money=Money-3000;}	} 
+function GiveMeDemand()	{MeanYF=MeanF+(Year*Growth);			Demand_FJ=Math.exp(((Math.random()*2-1)+(Math.random()*2-1)+(Math.random()*2-1))*StdevF+MeanYF);	 Demand_FJ=Math.round(2*Demand_FJ);	if(Demand_FJ<0){Demand_FJ=0;} 	return Demand_FJ;}
+function GiveMeScrap(C) {Scrapy=3*Math.log(C)+(Math.random()*5-5);	return Scrapy*0.01;}
+function LotReady_C()	{Stock2=Stock2+LotSize_C;	Prod_C=Prod_C-LotSize_C;		set("ST2",Stock2);		set("PRC",Prod_C);}
+function LotReady_W()	{Stock3=Stock3+LotSize_W;	Prod_W=Prod_W-LotSize_W;		set("ST3",Stock3);		set("PRW",Prod_W);}
+function BuyRawMat() 	{Stock1=Stock1+Order;		Cost_O=Math.round(Order*0.2);	set("ST1",Stock1); 		set("PRI",Cost_O);}
+function LotSizeDown()	{LotSize_C=LotSize_C-10; 	LotSize_W=LotSize_W-10; 		if(LotSize_C <= 1){LotSize_C= 1;} if(LotSize_W <= 1){LotSize_W= 1;} 		set('LS1',LotSize_C); 	set('LS2',LotSize_W);}
+function LotSizeUp()	{LotSize_C=LotSize_C+10; 	LotSize_W=LotSize_W+10; 		if(LotSize_C ==11){LotSize_C=10;} if(LotSize_W ==11){LotSize_W=10;} set('LS1',LotSize_C); 	set('LS2',LotSize_W);}
+
+
+function Produ_C()		{ 
+	Capacity_C=Math.round(Math.min((100*NB_Machines_C),(30*NB_Workers_C)));						set("CAC",Capacity_C);	
+	NewProd_C = Math.round(Math.min(Capacity_C,Stock1));	
+	Setup_C=Math.max(Math.round(0.01*(20-(Capacity_C/25)-SetReduc*5)*NewProd_C),1);				set("STC",Setup_C);		// ------------
+	NewProd_C = Math.max(0,(Math.round(Math.min(Capacity_C-Setup_C,Stock1))));											// ------------	
+	Stock1=Stock1-NewProd_C;																	set("ST1",Stock1);
+	Costock1=Math.round(Stock1*0.1);															set("CT1",Costock1); 
+	Utilization_WC=Math.max(0,(Math.round((NewProd_C/(30*NB_Workers_C))*100)));    				set("UWC",Utilization_WC);   
+	Utilization_MC=Math.max(0,(Math.round((NewProd_C/(100*NB_Machines_C))*100)));    			set("UMC",Utilization_MC);
+	if(SixSigma==1){Scrap_C=0;}	else{Scrap_C=Math.round(GiveMeScrap(Capacity_C)*NewProd_C);}	set("SCC",Scrap_C);
+	NewProd_C=NewProd_C-Scrap_C;																set("NPC",NewProd_C); 
+	Prod_C = Prod_C+NewProd_C;	if(isNaN(Prod_C)==true){Prod_C=0;}								set("PRC",Prod_C);																
+	while(Prod_C >= LotSize_C)	{LotReady_C();}
+	Cost_C=NB_Machines_C*5+NB_Workers_C*3;														set("CSTC",Cost_C);
+}
+function Produ_W()		{
+	Capacity_W=Math.round(Math.min((80*NB_Machines_W),(30*NB_Workers_W)));						set("CAW",Capacity_W);   
+	NewProd_W=Math.min(Capacity_W,Stock2);
+	Stock2=Stock2-NewProd_W;																	set("ST2",Stock2);  
+	Costock2=Math.round(Stock2*0.1);															set("CT2",Costock2);
+	Utilization_WW=Math.round((NewProd_W/(30*NB_Workers_W))*100); 								set("UWW",Utilization_WW);	
+	Utilization_MW=Math.round((NewProd_W/(80*NB_Machines_W))*100);								set("UMW",Utilization_MW);	
+	if(SixSigma==1){Scrap_W=0;}	else{Scrap_W=Math.round(GiveMeScrap(Capacity_W)*NewProd_W);}	set("SCW",Scrap_W);
+	NewProd_W=NewProd_W-Scrap_W;																set("NPW",NewProd_W);
+	Prod_W = Prod_W+NewProd_W;	 if(isNaN(Prod_W)==true){Prod_W=0;} 							set("PRW",Prod_W); 																	
+	while(Prod_W >= LotSize_W)	{LotReady_W();}
+	Cost_W=NB_Machines_W*5+NB_Workers_W*3;														set("CSTW",Cost_W);
+}
+function FinalResult()	{
+	Sales=Math.min(Demand,Stock3);										set("LSS",Sales);
+	Stock3=Stock3-Sales;												set("ST3",Stock3);
+	Costock3=Math.round(Stock3*0.1);									set("CT3",Costock3);
+	Costs=Cost_O+Cost_C+Cost_W+Costock1+Costock2+Costock3;				set("LSC",Costs);
+	Money=Math.round(Money+Sales-Costs);								set("MNY",Money);
+}
+
+
+
+
+
+
+function drawShape(){  
+ctx4 = document.getElementById('canvas4').getContext('2d');	Clean(ctx4); //Stock3
+ctx4.fillStyle = "black";	Rectangle(ctx4,20,25,5,60);	Rectangle(ctx4,20,25,55,5);	Rectangle(ctx4,75,25,5,60);	Triangle(ctx4,20,25,80,25,50,5);
+ctx4.fillStyle = "orange";	if(Stock3>200){ctx4.fillStyle = "red";}	if(Stock3>180){Rectangle(ctx4,27,37,14,14);}		if(Stock3>160){Rectangle(ctx4,43,37,14,14);}		if(Stock3>140){Rectangle(ctx4,59,37,14,14);}	if(Stock3>120){Rectangle(ctx4,27,53,14,14);}		if(Stock3>100){Rectangle(ctx4,43,53,14,14);}		if(Stock3>80){Rectangle(ctx4,59,53,14,14);}	if(Stock3>60){Rectangle(ctx4,27,69,14,14);}		if(Stock3>40){Rectangle(ctx4,43,69,14,14);}		if(Stock3>20){Rectangle(ctx4,59,69,14,14);}
+//-----------------------------------------------------------------------------------------------------
+ctx5 = document.getElementById('canvas5').getContext('2d');	Clean(ctx5); //Stock1
+ctx5.fillStyle = "black";	Rectangle(ctx5,20,25,5,60);	Rectangle(ctx5,20,25,55,5);	Rectangle(ctx5,75,25,5,60);	Triangle(ctx5,20,25,80,25,50,5);
+ctx5.fillStyle = "orange";	if(Stock1>200){ctx5.fillStyle = "red";}	if(Stock1>180){Rectangle(ctx5,27,37,14,14);}		if(Stock1>160){Rectangle(ctx5,43,37,14,14);}		if(Stock1>140){Rectangle(ctx5,59,37,14,14);}	if(Stock1>120){Rectangle(ctx5,27,53,14,14);}		if(Stock1>100){Rectangle(ctx5,43,53,14,14);}		if(Stock1>80){Rectangle(ctx5,59,53,14,14);}	if(Stock1>60){Rectangle(ctx5,27,69,14,14);}		if(Stock1>40){Rectangle(ctx5,43,69,14,14);}		if(Stock1>20){Rectangle(ctx5,59,69,14,14);}
+//-----------------------------------------------------------------------------------------------------		
+ctx6 = document.getElementById('canvas6').getContext('2d');	Clean(ctx6);  //Stock2
+ctx6.fillStyle = "black";	Rectangle(ctx6,20,25,5,60);	Rectangle(ctx6,20,25,55,5);	Rectangle(ctx6,75,25,5,60);	Triangle(ctx6,20,25,80,25,50,5);
+ctx6.fillStyle = "orange";	if(Stock2>200){ctx6.fillStyle = "red";}	if(Stock2>180){Rectangle(ctx6,27,37,14,14);}		if(Stock2>160){Rectangle(ctx6,43,37,14,14);}		if(Stock2>140){Rectangle(ctx6,59,37,14,14);}	if(Stock2>120){Rectangle(ctx6,27,53,14,14);}		if(Stock2>100){Rectangle(ctx6,43,53,14,14);}		if(Stock2>80){Rectangle(ctx6,59,53,14,14);}	if(Stock2>60){Rectangle(ctx6,27,69,14,14);}		if(Stock2>40){Rectangle(ctx6,43,69,14,14);}		if(Stock2>20){Rectangle(ctx6,59,69,14,14);}
+//-----------------------------------------------------------------------------------------------------
+ctx2 = document.getElementById('canvas1').getContext('2d');
+if(i<72){Clean(ctx2); ctx2.fillStyle = "orange";Cercle(ctx2,i,70,5);Cercle(ctx2,i-25,70,5);Rectangle(ctx2,i-27,40,5,20);Rectangle(ctx2,i+2,40,1,10);Rectangle(ctx2,i-27,40,30,3);Rectangle(ctx2,i-27,60,30,5);}
+ctx2.fillStyle = "black";	Rectangle(ctx2,75,15,20,5);Rectangle(ctx2,90,20,5,45);Rectangle(ctx2,75,60,20,15);
+//-----------------------------------------------------------------------------------------------------
+ctx3 = document.getElementById('canvas2').getContext('2d');	Clean(ctx3);
+if(j==0){ctx3.fillStyle = "orange";	if(i>15&&i<55){Rectangle(ctx3,i,30,25,15);} if(i<16){Rectangle(ctx3,15,30,25,15);} if(i>54)			{Rectangle(ctx3,55,30,25,15);}	if(i>15&&i<30){Rectangle(ctx3,i,45,25,10);} if(i<16){Rectangle(ctx3,15,45,25,10);} if(i>29&&i<50)	{Rectangle(ctx3,30,45,25,10);}if(i>49){Rectangle(ctx3,30,45+i-49,25,10);}	if(i>15&&i<55){Rectangle(ctx3,i,55,25,15);} if(i<16){Rectangle(ctx3,15,55,25,15);} if(i>54)			{Rectangle(ctx3,55,55,25,15);}}
+ctx3.fillStyle = "black";	Rectangle(ctx3,80,10,10,80);	Rectangle(ctx3,55,45,30,10);	Triangle(ctx3,55,45,55,55,50,50);
+//-----------------------------------------------------------------------------------------------------	
+ctx5 = document.getElementById('canvas3').getContext('2d');	Clean(ctx5);
+ctx5.fillStyle = "black";	Rectangle(ctx5,55,40,15,10);	Rectangle(ctx5,70,40,10,40);	Rectangle(ctx5,20,80,60,10);	Triangle(ctx5,55,40,55,50,49,68);
+if(j==1){ctx5.fillStyle = "orange";	Rectangle(ctx5,32,70,25,10);	if(i<80){Rectangle(ctx5,40,42,8,25);}	if(i<80 && i%2==0){	Trait(ctx5,49,68,49,63,"red");	Trait(ctx5,49,68,52,65,"red");	Trait(ctx5,49,68,54,68,"red");	Trait(ctx5,49,68,52,71,"red");	Trait(ctx5,49,68,49,73,"red");	Trait(ctx5,49,68,46,71,"red");	Trait(ctx5,49,68,44,68,"red");	Trait(ctx5,49,68,46,65,"red");}}
+//-----------------------------------------------------------------------------------------------------	
+
+
+
+
+
+
+//Check what is the speed
+	 if(document.getElementById('normal').checked==true)	{Speed=2;}
+else if(document.getElementById('slow').checked==true)		{Speed=1;}
+else if(document.getElementById('stop').checked==true)		{Speed=0;}
+
+
+//set("TEST",Order);
+
+
+//Rythm 0-->100-->0	
+if(i<100 && j==0){
+	i++;
+	if(Speed==1){i-=0.5;}
+	if(Speed==0){i--;}
+}		
+if(i>=100){j=1;} if(i<=0){j=0;}
+if(j==1){
+	i--;
+	if(Speed==1){i+=0.5;}
+	if(Speed==0){i++;}
+}
+
+//Demand evolving management
+//if(i%10==0){if(Demand==Dem_Target) {Dem_Target=GiveMeDemand();}	Diff=Dem_Target-Demand; if(Diff>0){Demand++;} else{Demand--;}	set("LSD",Demand);}
+
+	
+	
+
+
+
+//Refreshing management
+	 if (Speed==2){timing1=1000; timing2=5000;}
+else if (Speed==1){timing1=2000; timing2=10000;}
+else if (Speed==0){timing1=9999999999999999; timing2=timing1*5;}
+
+
+if(new Date().getTime() - refresh1 > timing1)			{Year++; set("YEA",Year); GetOptions(); BuyRawMat();  Produ_C();  Produ_W();	FinalResult();  Analysis(); refresh1 = new Date().getTime();}
+if(new Date().getTime() - refresh2 > timing2)   		{Demand=GiveMeDemand(); set("LSD",Demand); refresh2 = new Date().getTime();}
+requestAnimationFrame(drawShape);	 
+}
+
+
+
+
+function Analysis()
+{
+	WIP[Year]=Stock1+Stock2;
+	Cash[Year]=Money;
+	Sold[Year]=Sales;
+	Dema[Year]=Demand;
+	Cut_UU[Year]=NewProd_C/Capacity_C*100;
+	Cut_MU[Year]=Utilization_MC;
+	Cut_WU[Year]=Utilization_WC;
+	Wel_UU[Year]=NewProd_W/Capacity_W*100;
+	Wel_MU[Year]=Utilization_MW;
+	Wel_WU[Year]=Utilization_WW;
+
+
+	Clean2(stat1);
+	Clean2(stat2);
+	Clean2(stat3);
+	Clean2(stat4);
+	
+	stat1.fillStyle = "black";
+	stat2.fillStyle = "black";
+	stat3.fillStyle = "black";
+	stat4.fillStyle = "black";
+	
+	Rectangle2(stat1,10,10,1,200);
+	Rectangle2(stat1,10,210,1200,1);
+	
+	Rectangle2(stat2,10,10,1,200);
+	Rectangle2(stat2,10,210,1200,1);
+	
+	Rectangle2(stat3,10,10,1,200);
+	Rectangle2(stat3,10,210,1200,1);
+	
+	Rectangle2(stat4,10,10,1,200);
+	Rectangle2(stat4,10,210,1200,1);
+	
+	
+	stat1.font="0.7em Helvetica";				//Font Size
+	stat1.fillText("0",3,215);	
+	stat1.fillText("1000",3,10);
+	stat1.fillText("WIP",100,10);	
+	
+	stat2.font="0.7em Helvetica";				//Font Size
+	stat2.fillText("0",3,215);	
+	stat2.fillText("60000",3,10);
+	stat2.fillText("Cash",100,10);	
+	
+	stat3.font="0.7em Helvetica";				//Font Size
+	stat3.fillText("0",3,215);	
+	stat3.fillText("400",3,10);
+	stat3.fillStyle = "blue";	stat3.fillText("Demand",70,10);	
+	stat3.fillStyle = "red";	stat3.fillText("Sales",150,10);
+	
+	stat4.font="0.7em Helvetica";				//Font Size
+	stat4.fillText("0",3,215);	
+	stat4.fillText("100%",3,10);
+	stat4.fillText("Util.",150,10);
+	stat4.fillStyle = "red";			stat4.fillText("Cutting",300,10);
+	stat4.fillStyle = "Fuchsia";		stat4.fillText("cutting_Workers",400,10);
+	stat4.fillStyle = "LightPink";		stat4.fillText("cutting_Machines",500,10);
+	stat4.fillStyle = "Blue";			stat4.fillText("Welding",700,10);
+	stat4.fillStyle = "CornflowerBlue";	stat4.fillText("Welding_Workers",800,10);
+	stat4.fillStyle = "Cyan";			stat4.fillText("Weldinbg_Machines",900,10);
+
+	
+	
+	
+	
+	//stat1.fillStyle = "black";
+	
+	//for(p=1;p<=100;p++)
+	//{
+	//Rectangle2(stat1,p*2+10,	210-(WIP[p]/10*2)	,1,1);
+	//Rectangle2(stat2,p*2+10,	210-(Cash[p]/300)	,1,1);
+								
+								
+	//stat3.fillStyle = "blue";	Rectangle2(stat3,p*2+10,	210-(Dema[p]/2)	,1,1);
+	//stat3.fillStyle = "red";	Rectangle2(stat3,p*2+10,	209-(Sold[p]/2)	,1,1);
+	
+	//stat4.fillStyle = "red";			Rectangle2(stat4,p*2+10,	210-(Cut_UU[p]*2)	,1,1);
+	//stat4.fillStyle = "Fuchsia";		Rectangle2(stat4,p*2+10,	210-(Cut_WU[p]*2)	,1,1);
+	//stat4.fillStyle = "LightPink";	Rectangle2(stat4,p*2+10,	210-(Cut_MU[p]*2)	,1,1);
+	//stat4.fillStyle = "Blue";			Rectangle2(stat4,p*2+10,	210-(Wel_UU[p]*2)	,1,1);
+	//stat4.fillStyle = "CornflowerBlue";	Rectangle2(stat4,p*2+10,	210-(Wel_WU[p]*2)	,1,1);
+	//stat4.fillStyle = "Cyan";			Rectangle2(stat4,p*2+10,	210-(Wel_MU[p]*2)	,1,1);
+	
+	//}
+
+	
+	
+	
+stat1.strokeStyle = "black";	stat1.beginPath();	for(p=1;p<=1200;p++){stat1.moveTo(p*2+10,  210-(WIP[p]/10*2));	stat1.lineTo(p*2+10+2, 210-(WIP[p+1]/10*2)	);} stat1.stroke();
+	
+stat2.strokeStyle = "black";	stat2.beginPath();	for(p=1;p<=1200;p++){stat2.moveTo(p*2+10,  210-(Cash[p]/300));	stat2.lineTo(p*2+10+2, 210-(Cash[p+1]/300)	);} stat2.stroke();
+
+
+
+stat3.strokeStyle = "blue";	stat3.beginPath();	for(p=1;p<=1200;p++){stat3.moveTo(p*2+10,  210-(Dema[p]/2));	stat3.lineTo(p*2+10+2, 210-(Dema[p+1]/2)	);} stat3.stroke();
+
+stat3.strokeStyle = "red";	stat3.beginPath();	for(p=1;p<=1200;p++){stat3.moveTo(p*2+10,  210-(Sold[p]/2));	stat3.lineTo(p*2+10+2, 210-(Sold[p+1]/2)	);} stat3.stroke();
+
+
+
+stat4.strokeStyle = "red";					stat4.beginPath();	for(p=1;p<=1200;p++){stat4.moveTo(p*2+10,  210-(Cut_UU[p]*2));	stat4.lineTo(p*2+10+2, 210-(Cut_UU[p+1]*2)	);} stat4.stroke();
+stat4.strokeStyle = "Fuchsia";				stat4.beginPath();	for(p=1;p<=1200;p++){stat4.moveTo(p*2+10,  210-(Cut_WU[p]*2));	stat4.lineTo(p*2+10+2, 210-(Cut_WU[p+1]*2)	);} stat4.stroke();
+stat4.strokeStyle = "LightPink";			stat4.beginPath();	for(p=1;p<=1200;p++){stat4.moveTo(p*2+10,  210-(Cut_MU[p]*2));	stat4.lineTo(p*2+10+2, 210-(Cut_MU[p+1]*2)	);} stat4.stroke();
+stat4.strokeStyle = "Blue";					stat4.beginPath();	for(p=1;p<=1200;p++){stat4.moveTo(p*2+10,  210-(Wel_UU[p]*2));	stat4.lineTo(p*2+10+2, 210-(Wel_UU[p+1]*2)	);} stat4.stroke();
+stat4.strokeStyle = "CornflowerBlue";		stat4.beginPath();	for(p=1;p<=1200;p++){stat4.moveTo(p*2+10,  210-(Wel_WU[p]*2));	stat4.lineTo(p*2+10+2, 210-(Wel_WU[p+1]*2)	);} stat4.stroke();
+stat4.strokeStyle = "Cyan";					stat4.beginPath();	for(p=1;p<=1200;p++){stat4.moveTo(p*2+10,  210-(Wel_MU[p]*2));	stat4.lineTo(p*2+10+2, 210-(Wel_MU[p+1]*2)	);} stat4.stroke();
+
+
+
+}
+	
+
+
+
+
+</script>
+</head>
+<body onload="init();">
+<h1> Stream Process Manager </h1>
+
+<div style="border-top: solid 1px black"></div>    
+<table>
+	<tr>
+		<td> <h2><a href="#" class="info" style="color:#000000;text-decoration:none">Raw Material Order		<span style="width:100%;">Choose how much to order. Enough to feed the process and meet the demand, but not too much or there will be overstock.</span></a></td>
+		<td> <h2><a href="#" class="info" style="color:#000000;text-decoration:none">Raw Material Stock		<span style="width:100%;">Raw material ready for cutting.</span></a></td>
+		<td> <h2><a href="#" class="info" style="color:#000000;text-decoration:none">Cutting  				<span style="width:250%;">Hire a new employee or buy a new machine if needed. Costs per year for each are indicated in the red box. </span></a></td>
+		<td> <h2><a href="#" class="info" style="color:#000000;text-decoration:none">Intermediate Stock 	<span style="width:100%;">Stock of cut material, ready for welding. </span></a></td>
+		<td> <h2><a href="#" class="info" style="color:#000000;text-decoration:none"> Welding 				<span style="width:250%;">Hire a new employee or buy a new machine if needed. Costs per year for each are indicated in the red box.</span></a></td>
+		<td> <h2><a href="#" class="info" style="color:#000000;text-decoration:none">Storage				<span style="width:250%;">Don't lose over-production: stock it ! Stock capacity cost per year per 10 units is indicated in the red box, and actual stock will cost 1 per year per unit.</span></a></td>
+		<td rowspan="4" style="background-color:Moccasin">
+			<form>Speed: <span id="TEST"></span><br>
+				<input type="radio" name="speed" id="normal" checked="checked">Normal<br>
+				<input type="radio" name="speed" id="slow">Slow<br>
+				<input type="radio" name="speed" id="stop">Stop<br>
+			</form>
+			<h2>Result Data  / <span id="YEA"></span></h2>
+			<br>Demand: 	<b><span id="LSD"></span></b>	
+			<br>Sales:		<b><span id="LSS"></span></b> 
+			<br>Costs: 		<b><span id="LSC"></span></b>   
+			<br>Cash: 		<b><span id="MNY"></span></b> 
+		</td></tr>
+	<tr><td><span id="can1"> <span></td><td><span id="can5"> <span></td><td><span id="can2"> <span></td><td><span id="can6"> <span></td><td><span id="can3"> <span></td><td><span id="can4"> <span></td></tr>
+	<tr style="background-color:AliceBlue">
+		<td>Order: 		<b><span id="CMD"></span></b><br>	Cost: 		<b><span id="PRI"></span></b></td>
+		<td>Stock: 		<b><span id="ST1"></span></b><br> 	Cost: 		<b><span id="CT1"></span></b></td>
+		<td>Capacity: 	<b><span id="CAC"></span></b><br>	Workers: 	<b><span id="NWC"></span></b>  	(Util: <b><span id="UWC"></span></b>%)  <br>Machines: <b><span id="NMC"></span></b> (Util: <b><span id="UMC"></span></b>%)   <br>Setup:  <b><span id="STC"></span></b>	<br>Scrap:  <b><span id="SCC"></span></b> <br>Production: <b><span id="NPC"></span></b><br>Lot: <b><span id="PRC"></span></b> /<b><span id="LS1"></span></b>  <br>Cost: <b><span id="CSTC"></span></b></td>
+		<td>Stock: 		<b><span id="ST2"></span></b><br> 	Cost: 		<b><span id="CT2"></span></b></td>
+		<td>Capacity: 	<b><span id="CAW"></span></b><br>	Workers: 	<b><span id="NWW"></span></b> 	(Util: <b><span id="UWW"></span></b>%)  <br>Machines: <b><span id="NMW"></span></b> (Util: <b><span id="UMW"></span></b>%)   <br>Setup:  <b><span id="STW"></span></b>	<br>Scrap:  <b><span id="SCW"></span></b> <br>Production: <b><span id="NPW"></span></b><br>Lot: <b><span id="PRW"></span></b> /<b><span id="LS2"></span></b>  <br>Cost: <b><span id="CSTW"></span></b></td>
+		<td>Stock: 		<b><span id="ST3"></span></b><br> 	Cost: 		<b><span id="CT3"></span></b></td></tr>
+	<tr style="background-color:MistyRose">
+		<td>
+			<input type=button style="background-color:LightCoral" value="+10 Order"   	onclick="Order=Order+10; 						set('CMD',Order);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black">  <br>
+			<input type=button style="background-color:LightCoral" value="+1 Order"   	onclick="Order=Order+1; 						set('CMD',Order);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black">  <br>
+			<input type=button style="background-color:LightCoral" value="-10 Order"   	onclick="Order=Order-10; if(Order<0){Order=0;}  set('CMD',Order);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black">  <br>
+			<input type=button style="background-color:LightCoral" value="-1 Order"   	onclick="Order=Order-1;  if(Order<0){Order=0;}	set('CMD',Order);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black">  <br>
+		</td>
+		<td></td>
+		<td>
+			<input type=button style="background-color:LightCoral" value="+1 Worker"   	onclick="NB_Workers_C++; 						set('NWC',NB_Workers_C);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> (<span id="LC1"></span>3/year) <br>
+			<input type=button style="background-color:LightCoral" value="-1 Worker"   	onclick="if(NB_Workers_C>0) {NB_Workers_C--;}	set('NWC',NB_Workers_C);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> <br>
+			<input type=button style="background-color:LightCoral" value="+1 Machine"  	onclick="NB_Machines_C++;						set('NMC',NB_Machines_C);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> (<span id="MC1"></span>5/year) <br>
+			<input type=button style="background-color:LightCoral" value="-1 Machine"  	onclick="if(NB_Machines_C>0){NB_Machines_C--;} 	set('NMC',NB_Machines_C);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> <br>
+		</td>
+		<td></td>
+		<td>
+			<input type=button style="background-color:LightCoral" value="+1 Worker"  	onclick="NB_Workers_W++;				set('NWW',NB_Workers_W);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> (<span id="LC2"></span>3/year) <br>
+			<input type=button style="background-color:LightCoral" value="-1 Worker"  	onclick="NB_Workers_W--;				set('NWW',NB_Workers_W);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> <br>
+			<input type=button style="background-color:LightCoral" value="+1 Machine"  	onclick="NB_Machines_W++;				set('NMW',NB_Machines_W);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> (<span id="MC2"></span>5/year) <br>
+			<input type=button style="background-color:LightCoral" value="-1 Machine"  	onclick="NB_Machines_W--;				set('NMW',NB_Machines_W);" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> <br>
+		</td>
+		<td></td>
+		</tr>
+	<tr style="background-color:MistyRose"><td style="background-color:White">&nbsp </td> <td colspan="4"> <p style="text-align:center">
+			<a href="#" class="info" style="color:#000000;text-decoration:none">Quality Policy 		<span style="width:250%;">Dramatically improve the quality policy to avoid scrap.</span></a><input id="SSG"  type="checkbox" style="transform: scale(1.2)"> (5000)			<br> 
+			<a href="#" class="info" style="color:#000000;text-decoration:none">Setup Reduction 	<span style="width:250%;">Reduce the Setup Time.</span></a><input id="STP"  type="checkbox" style="transform: scale(1.2)"> (3000)			<br> 
+			<input type=button style="background-color:LightCoral" value="LotSize--"  	onclick="LotSizeDown();" 	style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> <br>
+			<input type=button style="background-color:LightCoral" value="LotSize++"  	onclick="LotSizeUp();" 		style="height:55px; width:150px; font-size:90%;  background-color:white; border: 2px solid black"> <br> </p>
+		</td><td style="background-color:White">&nbsp </td></tr>
+</table>
+<h3>Design & Code : Jordi WEISS  -  Inspired by "Operations Management" courses of Prof. Suzanne de Treville, Universite de Lausanne</h3>
+
+<br><br>
+<table>    
+<tr> <td><canvas id="canana1" width="1200" height="220"></canvas> </td><tr>
+<tr> <td><canvas id="canana2" width="1200" height="220"></canvas> </td><tr>
+<tr> <td><canvas id="canana3" width="1200" height="220"></canvas> </td><tr>
+<tr> <td><canvas id="canana4" width="1200" height="220"></canvas> </td><tr>
+</tr></table>
+
+
+</body> 
